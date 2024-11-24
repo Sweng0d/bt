@@ -1,0 +1,22 @@
+[package]
+name = "backtesting"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Para o módulo data_loader
+csv = "1.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0" # Se necessário
+
+# Para os módulos strategy e backtester
+ndarray = "0.15"
+nalgebra = "0.32" # Se necessário
+
+# Para o módulo report
+plotters = "0.3"
+
+# Sim, é possível modificar o seu código para ler os dados diretamente de um link, em vez de baixar o arquivo manualmente. Para isso, você pode utilizar uma biblioteca HTTP como o reqwest para fazer uma requisição ao URL do arquivo CSV e, em seguida, processar o conteúdo recebido.
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+chrono = { version = "0.4", features = ["serde"] }
+rayon = "1.5"
