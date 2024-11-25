@@ -1,6 +1,10 @@
 pub mod indicators;
+pub mod process_strategy;
+pub use process_strategy::process_strategy;
+
 
 use crate::data_loader::MarketData;
+
 
 /// Define o comportamento comum para todas as estratégias
 pub trait Strategy {

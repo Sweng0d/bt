@@ -4,12 +4,13 @@ mod backtester;
 mod report;
 
 use data_loader::load_csv_data_from_file;
-use strategy::{MovingAverageCrossover, BuyAndHold, Strategy};
-use backtester::run_backtest;
-use report::{calculate_metrics, plot_portfolio_value};
+use strategy::{MovingAverageCrossover, BuyAndHold, process_strategy};
 use rayon::prelude::*;
 use std::cmp::Ordering;
+use std::path::Path;
 use std::sync::Arc;
+use crate::backtester::run_backtest;
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Carregar os dados do mercado e envolver em Arc
@@ -18,14 +19,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Total de registros carregados: {}", market_data.len());
 
-    // Estratégia de Buy and Hold (Exemplo Adicional)
+    // Criar diretório de saída para os relatórios
+    let output_dir = Path::new("reports");
+    std::fs::create_dir_all(&output_dir)?;
+
+    // Estratégia de Buy and Hold
     let buy_and_hold_strategy = BuyAndHold::new();
-    let (portfolio_bh, _) = run_backtest(&buy_and_hold_strategy, &market_data[..]);
-    let total_return_bh = (portfolio_bh.last().unwrap() - 10000.0) / 10000.0;
-    println!(
-        "\nEstratégia Buy and Hold:\nRetorno Total: {:.2}%",
-        total_return_bh * 100.0
-    );
+    process_strategy(
+        &buy_and_hold_strategy,
+        &market_data,
+        "buy_and_hold",
+        &output_dir,
+        0.02,
+    )?;
 
     // Definir os intervalos das médias móveis
     let short_ma_range = 5..=200;
@@ -39,7 +45,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             long_ma_range.clone().into_par_iter().filter_map(move |long_window| {
                 if long_window > short_window {
                     let strategy = MovingAverageCrossover::new(short_window, long_window);
-                    let (portfolio_values, _) = run_backtest(&strategy, &market_data[..]);
+                    let (portfolio_values, _, _) = run_backtest(&strategy, &market_data[..]);
                     let total_return = (portfolio_values.last().unwrap() - 10000.0) / 10000.0;
 
                     Some((short_window, long_window, total_return))
@@ -66,26 +72,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    // Gerar relatório para a melhor combinação
+    // Processar a melhor combinação de Moving Average Crossover
     let (best_short_ma, best_long_ma, _) = sorted_results[0];
+    let best_strategy = MovingAverageCrossover::new(best_short_ma, best_long_ma);
+    process_strategy(
+        &best_strategy,
+        &market_data,
+        "best_moving_average_crossover",
+        &output_dir,
+        0.02,
+    )?;
 
-    let strategy = MovingAverageCrossover::new(best_short_ma, best_long_ma);
-    let (portfolio_values, signals) = run_backtest(&strategy, &market_data[..]);
-
-    // Calcular métricas
-    let metrics = calculate_metrics(&portfolio_values, &signals, &market_data[..], 0.02);
-
-    // Gerar gráfico da curva de capital
-    plot_portfolio_value(&portfolio_values, "portfolio_value.png")?;
-
-    // Exibir métricas
-    println!("\nMétricas de Desempenho:");
-    println!("Retorno Total: {:.2}%", metrics.total_return * 100.0);
-    println!("Retorno Anualizado: {:.2}%", metrics.annualized_return * 100.0);
-    println!("Volatilidade: {:.2}%", metrics.volatility * 100.0);
-    println!("Sharpe Ratio: {:.2}", metrics.sharpe_ratio);
-    println!("Drawdown Máximo: {:.2}%", metrics.max_drawdown * 100.0);
-    println!("Número de Trades: {}", metrics.num_trades);
+    println!("\nRelatórios gerados em {:?}", output_dir);
 
     Ok(())
 }
