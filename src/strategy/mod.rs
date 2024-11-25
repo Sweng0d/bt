@@ -2,6 +2,12 @@ pub mod indicators;
 
 use crate::data_loader::MarketData;
 
+/// Define o comportamento comum para todas as estratégias
+pub trait Strategy {
+    fn generate_signals(&self, market_data: &[MarketData]) -> Vec<Signal>;
+}
+
+/// Estratégia de Moving Average Crossover
 pub struct MovingAverageCrossover {
     pub short_window: usize,
     pub long_window: usize,
@@ -14,8 +20,11 @@ impl MovingAverageCrossover {
             long_window,
         }
     }
+}
 
-    pub fn generate_signals(&self, market_data: &[MarketData]) -> Vec<Signal> {
+/// Implementa o trait Strategy para Moving Average Crossover
+impl Strategy for MovingAverageCrossover {
+    fn generate_signals(&self, market_data: &[MarketData]) -> Vec<Signal> {
         let short_ma = indicators::moving_average(market_data, self.short_window);
         let long_ma = indicators::moving_average(market_data, self.long_window);
 
@@ -42,6 +51,26 @@ impl MovingAverageCrossover {
     }
 }
 
+/// Estratégia de Buy and Hold
+pub struct BuyAndHold;
+
+impl BuyAndHold {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+/// Implementa o trait Strategy para Buy and Hold
+impl Strategy for BuyAndHold {
+    fn generate_signals(&self, market_data: &[MarketData]) -> Vec<Signal> {
+        // Apenas compra no início e mantém posição
+        let mut signals = vec![Signal::Buy];
+        signals.extend(vec![Signal::Hold; market_data.len() - 1]);
+        signals
+    }
+}
+
+/// Enum que representa os sinais de compra, venda ou manutenção
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Signal {
     Buy,

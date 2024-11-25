@@ -4,7 +4,7 @@ mod backtester;
 mod report;
 
 use data_loader::load_csv_data_from_file;
-use strategy::MovingAverageCrossover;
+use strategy::{MovingAverageCrossover, BuyAndHold, Strategy};
 use backtester::run_backtest;
 use report::{calculate_metrics, plot_portfolio_value};
 use rayon::prelude::*;
@@ -17,6 +17,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let market_data = Arc::new(load_csv_data_from_file(file_path)?);
 
     println!("Total de registros carregados: {}", market_data.len());
+
+    // Estratégia de Buy and Hold (Exemplo Adicional)
+    let buy_and_hold_strategy = BuyAndHold::new();
+    let (portfolio_bh, _) = run_backtest(&buy_and_hold_strategy, &market_data[..]);
+    let total_return_bh = (portfolio_bh.last().unwrap() - 10000.0) / 10000.0;
+    println!(
+        "\nEstratégia Buy and Hold:\nRetorno Total: {:.2}%",
+        total_return_bh * 100.0
+    );
 
     // Definir os intervalos das médias móveis
     let short_ma_range = 5..=200;
@@ -46,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     sorted_results.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(Ordering::Equal));
 
     // Exibir as duas melhores combinações
-    println!("\nAs duas melhores combinações são:");
+    println!("\nAs duas melhores combinações de Moving Average Crossover são:");
     for (i, (short_ma, long_ma, total_return)) in sorted_results.iter().take(2).enumerate() {
         println!(
             "{}º: Short MA: {}, Long MA: {}, Retorno Total: {:.2}%",
@@ -80,4 +89,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
